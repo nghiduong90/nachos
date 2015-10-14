@@ -1,5 +1,7 @@
 package nachos.threads;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 
 /**
@@ -21,6 +23,7 @@ public class Condition2 {
 	 */
 	public Condition2(Lock conditionLock) {
 		this.conditionLock = conditionLock;
+		waitQueue = new LinkedList<KThread>();
 	}
 
 	/**
@@ -31,10 +34,20 @@ public class Condition2 {
 	 */
 	public void sleep() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
+		value = 0;
 		conditionLock.release();
-
-		conditionLock.acquire();
+		boolean intStatus = Machine.interrupt().disable();
+		
+		if (value == 0) {
+			waitQueue.add(KThread.currentThread());
+			KThread.sleep();
+		}
+		else {
+			value--;
+		}
+		
+		Machine.interrupt().restore(intStatus); 
+		conditionLock.acquire();		
 	}
 
 	/**
@@ -43,6 +56,18 @@ public class Condition2 {
 	 */
 	public void wake() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+		
+		if (!waitQueue.isEmpty()) {
+			KThread threadFromQueue = waitQueue.poll();
+			boolean intStatus = Machine.interrupt().disable();
+			if (threadFromQueue != null) {
+				threadFromQueue.ready();
+			}
+			else {
+				value++;
+			}
+			Machine.interrupt().restore(intStatus);	
+		}
 	}
 
 	/**
@@ -51,7 +76,51 @@ public class Condition2 {
 	 */
 	public void wakeAll() {
 		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+		while (!waitQueue.isEmpty())
+			wake();
 	}
 
 	private Lock conditionLock;
+	private int value;
+	private LinkedList<KThread> waitQueue;
+	
+	public static void selfTest(){
+	    final Lock lock = new Lock();
+	    //final Condition empty = new Condition(lock);
+	    final Condition2 empty = new Condition2(lock);
+	    final LinkedList<Integer> list = new LinkedList<Integer>();
+	    
+	    KThread consumer = new KThread( new Runnable () {
+	        public void run() {
+	            lock.acquire();
+	            while(list.isEmpty()){
+	                empty.sleep();
+	            }
+	            Lib.assertTrue(list.size() == 5, "List should have 5 values.");
+	            while(!list.isEmpty()) {
+	                System.out.println("Removed " + list.removeFirst());
+	            }
+	            lock.release();
+	        }
+	    });
+	    
+	    KThread producer = new KThread( new Runnable () {
+	        public void run() {
+	            lock.acquire();
+	            for (int i = 0; i < 5; i++) {
+	                list.add(i);
+	                System.out.println("Added " + i);
+	            }
+	            empty.wake();
+	            lock.release();
+	        }
+	    });
+	    
+	    consumer.setName("Consumer");
+	    producer.setName("Producer");
+	    consumer.fork();
+	    producer.fork();
+	    consumer.join();
+	    producer.join();
+	}
 }
