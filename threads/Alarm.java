@@ -45,9 +45,29 @@ public class Alarm {
 	 * @see nachos.machine.Timer#getTime()
 	 */
 	public void waitUntil(long x) {
-		// for now, cheat just to get something working (busy waiting is bad)
 		long wakeTime = Machine.timer().getTime() + x;
-		while (wakeTime > Machine.timer().getTime())
-			KThread.yield();
+		System.out.println("\tAlarm::Wait until " + wakeTime);
+		
+		KThread.currentThread().setWakeTime(wakeTime);
+		KThread.yield();
+	}
+	
+
+	// Place this function inside Alarm. And make sure Alarm.selfTest() is called inside ThreadedKernel.selfTest() method.
+	public static void selftest() {
+	    KThread t1 = new KThread(new Runnable() {
+	        public void run() {
+	            long time1 = Machine.timer().getTime();
+	            int waitTime = 800;
+	            System.out.println("Thread calling wait at time:" + time1);
+	            ThreadedKernel.alarm.waitUntil(waitTime);
+	            System.out.println("Thread woken up after:" + (Machine.timer().getTime() - time1) + ", Current Time: " + Machine.timer().getTime());
+	            Lib.assertTrue((Machine.timer().getTime() - time1) >= waitTime, " thread woke up too early.");
+	            
+	        }
+	    });
+	    t1.setName("T1");
+	    t1.fork();
+	    t1.join();
 	}
 }
