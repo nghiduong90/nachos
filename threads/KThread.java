@@ -197,7 +197,7 @@ public class KThread {
 	
 	public static void finish() {
 		Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
-		
+		System.out.println("\tFinishing thread: " + currentThread.name);
 		Machine.interrupt().disable();
 
 		//Freeing the parent thread 
@@ -521,7 +521,6 @@ public class KThread {
 	//wakeTime if set is the (time) ticks to wait until to run
 	private long wakeTime = 0;
 	
-	
 	private static ThreadQueue readyQueue = null;
 
 	private static KThread currentThread = null;
@@ -537,15 +536,15 @@ public class KThread {
 	 * 
 	 * 
 	 * 
-	 * Ping Test (Piazza)
+	 * Tests Test
 	 * 
 	 *
 	 * 
 	 */
+	static KThread thread0, thread1, thread2, thread3;
+	static KThread threadA, threadB, threadC;
 	
-	
-	
-	static KThread thread0, thread1, thread2;
+	//Ping Test (Piazza)
 	private static class PingTest implements Runnable 
 	{
 		PingTest(int which) 
@@ -557,13 +556,16 @@ public class KThread {
 		{
 			if ( which == 2 )
 				thread1.join();	//Thread 2 is running thread1.join, thread 2 wants to be the parent
-
+		
 			if ( which == 1 )
 				thread0.join();
 
+			if ( which == 3)
+				thread2.join();
+			
 			for (int i = 0; i < 5; i++) 
 			{
-				System.out.println("*** thread " + which + " looped " + i + " times");
+				System.out.println("TEST 1: Thread: " + which + " - " + i);
 				KThread.yield();
 			}
 		}
@@ -571,15 +573,58 @@ public class KThread {
 		private int which;
 	}
 
+	private static class PingTest2 implements Runnable 
+	{
+		PingTest2(int which) 
+		{
+			this.which = which;
+		}
+
+		//Have threads A,B,C.  C joins A, B sleeps until wake, C joins B
+		//Should print in 0, 2, 1
+		public void run() 
+		{
+			if ( which == 2 ){
+				threadA.join();
+				threadB.join();
+			}
+		
+			if ( which == 1 ){
+				ThreadedKernel.alarm.waitUntil(5000);
+			}
+				
+			for (int i = 0; i < 5; i++) 
+			{
+				System.out.println("\tTEST 2: Thread: " + which + " - " + i);
+				KThread.yield();
+			}
+		}
+
+		private int which;
+	}
+	
+	
 	public static void selfTest() 
 	{
 		Lib.debug(dbgThread, "Enter KThread.selfTest");
 		thread0 = new KThread(new PingTest(0)).setName("forked thread 0");
 		thread1 = new KThread(new PingTest(1)).setName("forked thread 1");
 		thread2 = new KThread(new PingTest(2)).setName("forked thread 2");
+		thread3 = new KThread(new PingTest(3)).setName("forked thread 3");
 		thread0.fork();
 		thread1.fork();
 		thread2.fork();
+		thread3.fork();
+	}
+	
+	public static void selfTest2(){
+		Lib.debug(dbgThread, "Enter KThread.selfTest2");
+		threadA = new KThread(new PingTest2(0)).setName("forked thread A");
+		threadB = new KThread(new PingTest2(1)).setName("forked thread B");
+		threadC = new KThread(new PingTest2(2)).setName("forked thread C");
+		threadA.fork();
+		threadB.fork();
+		threadC.fork();
 	}
 
 }

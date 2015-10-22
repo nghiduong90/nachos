@@ -58,7 +58,7 @@ public class Alarm {
 	    KThread t1 = new KThread(new Runnable() {
 	        public void run() {
 	            long time1 = Machine.timer().getTime();
-	            int waitTime = 800;
+	            int waitTime = 10000;
 	            System.out.println("Thread calling wait at time:" + time1);
 	            ThreadedKernel.alarm.waitUntil(waitTime);
 	            System.out.println("Thread woken up after:" + (Machine.timer().getTime() - time1) + ", Current Time: " + Machine.timer().getTime());
@@ -70,4 +70,5 @@ public class Alarm {
 	    t1.fork();
 	    t1.join();
 	}
+	
 }
